@@ -12,6 +12,24 @@
             height: 600px;
             width: 100%;
         }
+        #legend {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 5px rgba(0,0,0,0.3);
+            font-family: Arial, sans-serif;
+        }
+        #legend h3 {
+            margin: 0;
+            font-size: 14px;
+        }
+        #legend p {
+            margin: 5px 0;
+            font-size: 12px;
+        }
     </style>
 </head>
 
@@ -21,6 +39,18 @@
     <p>Haritada bir noktaya tıklayın, çevredeki binaları turuncu renkte görün.</p>
 
     <div id="map"></div>
+    <button id="showBuildingCount">Bina Sayısını Göster</button>
+    <p id="buildingCount">Toplam Bina: -</p>
+
+    <div id="legend">
+        <h3>Bina Renk Açıklamaları</h3>
+        <p><span style="color: orange;">⬤</span> Konut (Residential)</p>
+        <p><span style="color: blue;">⬤</span> Okul (School)</p>
+        <p><span style="color: green;">⬤</span> Cami (Mosque)</p>
+        <p><span style="color: red;">⬤</span> Hastane (Hospital)</p>
+        <p><span style="color: purple;">⬤</span> Ofis (Office)</p>
+        <p><span style="color: gray;">⬤</span> Diğer</p>
+    </div>
 
     <script>
         var map = L.map("map").setView([41.0082, 28.9784], 14);
@@ -30,7 +60,8 @@
             let lat = e.latlng.lat;
             let lon = e.latlng.lng;
 
-            // Kullanıcının tıkladığı noktayı işaretle
+            window.lastSelectedLocation = { lat, lon };
+
             L.marker([lat, lon]).addTo(map)
                 .bindPopup("Seçilen Nokta: " + lat + ", " + lon).openPopup();
 
@@ -38,23 +69,24 @@
             L.circle([lat, lon], {
                 color: "blue",
                 fillColor: "#add8e6",
-                fillOpacity: 0.3,
-                radius: 500  // 200 metre yarıçap
+                fillOpacity: 0.05,
+                radius: 500  // 500 metre yarıçap
             }).addTo(map);
 
-            // FastAPI'ye istek atarak binaları getir
             fetch(`http://localhost:8000/search/?lat=${lat}&lon=${lon}&category=building`)
                 .then(response => response.json())
                 .then(data => {
                     console.log("API'den Gelen Veri:", data);
 
-                    // Direkt 'elements' içinde mi kontrol et
                     if (data.elements) {
                         data.elements.forEach(element => {
                             if (element.type === "way" && element.geometry) {
                                 let coords = element.geometry.map(p => [p.lat, p.lon]);
-                                L.polygon(coords, { color: "green", fillOpacity: 0.6 }).addTo(map)
-                                    .bindPopup(element.tags?.name || "Bina");
+                                let buildingType = element.tags?.building || "default";
+                                let color = getBuildingColor(buildingType);
+
+                                L.polygon(coords, { color: color, fillOpacity: 0.6 }).addTo(map)
+                                    .bindPopup(`${element.tags?.name || "Bina"}<br>Tür: ${buildingType}`);
                             }
                         });
                     } else {
@@ -64,7 +96,34 @@
                 .catch(error => console.error("API Hatası:", error));
         }
 
+        // Kategoriye göre bina renklendirme fonksiyonu
+        function getBuildingColor(buildingType) {
+            switch (buildingType) {
+                case "residential": return "orange";
+                case "school": return "blue";
+                case "mosque": return "green";
+                case "hospital": return "red";
+                case "office": return "purple";
+                default: return "gray";
+            }
+        }
+
         map.on("click", onMapClick);
+        
+        document.getElementById("showBuildingCount").addEventListener("click", function() {
+            if (!window.lastSelectedLocation) {
+                alert("Önce haritada bir noktaya tıklayın.");
+                return;
+            }
+
+            let { lat, lon } = window.lastSelectedLocation;
+            fetch(`http://localhost:8000/building_count/?lat=${lat}&lon=${lon}&radius=1000`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("buildingCount").innerText = `Toplam Bina: ${data.count}`;
+                })
+                .catch(error => console.error("API Hatası:", error));
+        });
     </script>
 
 </body>

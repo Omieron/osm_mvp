@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Query
 from sqlalchemy.orm import Session
 from database import get_db
-from overpass import get_osm_data
-from geoalchemy2.functions import ST_AsGeoJSON
+from geoalchemy2.functions import ST_AsGeoJSON, ST_DWithin, ST_Transform
+from shapely.geometry import Point
+from geoalchemy2.shape import from_shape
 from fastapi.middleware.cors import CORSMiddleware
 import json
 import requests
@@ -56,3 +57,24 @@ def get_buildings(db: Session = Depends(get_db)):
         })
     
     return {"type": "FeatureCollection", "features": geojson_features}
+
+@app.get("/building_count/")
+def get_building_count(
+    lat: float = Query(...),
+    lon: float = Query(...),
+    radius: int = 1000,
+    db: Session = Depends(get_db)
+):
+    # Kullanıcı noktasını Point olarak tanımla
+    point = f"SRID=4326;POINT({lon} {lat})"
+
+    # ST_Transform ile geometrileri EPSG:3857 (metrik sistem) formatına çevir
+    count = db.query(Building).filter(
+        ST_DWithin(
+            ST_Transform(Building.geom, 3857),  # Geometrik veriyi metrik SRID'ye çevir
+            ST_Transform(from_shape(Point(lon, lat), srid=4326), 3857),  # Kullanıcı konumunu da metrik sisteme çevir
+            radius
+        )
+    ).count()
+
+    return {"count": count}
