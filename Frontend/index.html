@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSM Bina Gösterimi</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        #map {
+            height: 600px;
+            width: 100%;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>OSM Bina Gösterimi</h2>
+    <p>Haritada bir noktaya tıklayın, çevredeki binaları turuncu renkte görün.</p>
+
+    <div id="map"></div>
+
+    <script>
+        var map = L.map("map").setView([41.0082, 28.9784], 14);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+
+        function onMapClick(e) {
+            let lat = e.latlng.lat;
+            let lon = e.latlng.lng;
+
+            // Kullanıcının tıkladığı noktayı işaretle
+            L.marker([lat, lon]).addTo(map)
+                .bindPopup("Seçilen Nokta: " + lat + ", " + lon).openPopup();
+
+            // Seçilen noktanın çevresine bir çember ekle
+            L.circle([lat, lon], {
+                color: "blue",
+                fillColor: "#add8e6",
+                fillOpacity: 0.3,
+                radius: 500  // 200 metre yarıçap
+            }).addTo(map);
+
+            // FastAPI'ye istek atarak binaları getir
+            fetch(`http://localhost:8000/search/?lat=${lat}&lon=${lon}&category=building`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("API'den Gelen Veri:", data);
+
+                    // Direkt 'elements' içinde mi kontrol et
+                    if (data.elements) {
+                        data.elements.forEach(element => {
+                            if (element.type === "way" && element.geometry) {
+                                let coords = element.geometry.map(p => [p.lat, p.lon]);
+                                L.polygon(coords, { color: "green", fillOpacity: 0.6 }).addTo(map)
+                                    .bindPopup(element.tags?.name || "Bina");
+                            }
+                        });
+                    } else {
+                        console.error("Hatalı API Yanıtı Formatı:", data);
+                    }
+                })
+                .catch(error => console.error("API Hatası:", error));
+        }
+
+        map.on("click", onMapClick);
+    </script>
+
+</body>
+
+</html>
