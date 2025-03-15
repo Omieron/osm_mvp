@@ -1,0 +1,67 @@
+{
+    "version": 8,
+    "name": "Custom Style",
+    "sources": {
+      "osm": {
+        "type": "vector",
+        "url": "https://demotiles.maplibre.org/tiles.json"
+      },
+      "openmaptiles": {
+        "type": "vector",
+        "url": "https://free.tilehosting.com/data/v3.json?key=R8E1nRxg5ZLdeH6SLbky"
+      }
+    },
+    "layers": [
+      {
+        "id": "background",
+        "type": "background",
+        "paint": {
+          "background-color": "#ececec"
+        }
+      },
+      {
+        "id": "water",
+        "type": "fill",
+        "source": "openmaptiles",
+        "source-layer": "water",
+        "paint": {
+          "fill-color": "#a0c8f0"
+        }
+      },
+      {
+        "id": "roads",
+        "type": "line",
+        "source": "openmaptiles",
+        "source-layer": "transportation",
+        "paint": {
+          "line-color": "#bbb",
+          "line-width": 1.5
+        }
+      },
+      {
+        "id": "buildings",
+        "type": "fill",
+        "source": "openmaptiles",
+        "source-layer": "building",
+        "paint": {
+          "fill-color": "#aaa",
+          "fill-opacity": 0.6
+        }
+      },
+      {
+        "id": "3d-buildings",
+        "type": "fill-extrusion",
+        "source": "openmaptiles",
+        "source-layer": "building",
+        "minzoom": 14,
+        "paint": {
+          "fill-extrusion-color": "#aaa",
+          "fill-extrusion-height": ["*", ["get", "render_height"], 1],
+          "fill-extrusion-base": 0,
+          "fill-extrusion-opacity": 0.9
+        }
+      }
+    ],
+    "center": [28.9784, 41.0082], 
+    "zoom": 14
+  }

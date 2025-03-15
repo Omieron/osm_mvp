@@ -4,125 +4,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OSM Bina Gösterimi</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <title>Dinamik 3D Bina Haritası</title>
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
+
+    <!-- MapLibre GL CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@latest/dist/maplibre-gl.css">
+    <script src="https://cdn.jsdelivr.net/npm/maplibre-gl@latest/dist/maplibre-gl.js"></script>
+
     <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
         #map {
-            height: 600px;
+            position: absolute;
+            top: 0;
+            bottom: 0;
             width: 100%;
         }
-        #legend {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            background: white;
-            padding: 10px;
-            border-radius: 5px;
-            box-shadow: 0px 0px 5px rgba(0,0,0,0.3);
-            font-family: Arial, sans-serif;
-        }
-        #legend h3 {
-            margin: 0;
-            font-size: 14px;
-        }
-        #legend p {
-            margin: 5px 0;
-            font-size: 12px;
+
+        #legend span {
+            display: inline-block;
+            margin-top: 3px;
+            border-radius: 3px;
         }
     </style>
 </head>
 
 <body>
 
-    <h2>OSM Bina Gösterimi</h2>
-    <p>Haritada bir noktaya tıklayın, çevredeki binaları turuncu renkte görün.</p>
-
     <div id="map"></div>
-    <button id="showBuildingCount">Bina Sayısını Göster</button>
-    <p id="buildingCount">Toplam Bina: -</p>
 
-    <div id="legend">
-        <h3>Bina Renk Açıklamaları</h3>
-        <p><span style="color: orange;">⬤</span> Konut (Residential)</p>
-        <p><span style="color: blue;">⬤</span> Okul (School)</p>
-        <p><span style="color: green;">⬤</span> Cami (Mosque)</p>
-        <p><span style="color: red;">⬤</span> Hastane (Hospital)</p>
-        <p><span style="color: purple;">⬤</span> Ofis (Office)</p>
-        <p><span style="color: gray;">⬤</span> Diğer</p>
+    <div id="legend" style="position: absolute; bottom: 10px; left: 10px; background: white; padding: 10px; border-radius: 5px;">
+        <strong>Bina Türleri ve Renkler:</strong><br>
+        <span style="background-color:#0077b6; color: white; padding: 2px 5px;">Ofis & Dükkan</span><br>
+        <span style="background-color:#9b5de5; color: white; padding: 2px 5px;">İbadethane</span><br>
+        <span style="background-color:#2a9d8f; color: white; padding: 2px 5px;">Konut</span><br>
+        <span style="background-color:#d90429; color: white; padding: 2px 5px;">Kamu Binaları</span><br>
+        <span style="background-color:#ff8800; color: white; padding: 2px 5px;">AVM</span><br>
+        <span style="background-color:#aaa; color: white; padding: 2px 5px;">Bilinmeyen</span><br>
     </div>
 
     <script>
-        var map = L.map("map").setView([41.0082, 28.9784], 14);
-        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+        document.addEventListener("DOMContentLoaded", function () {
+            const map = new maplibregl.Map({
+                container: "map",
+                style: "https://api.maptiler.com/maps/streets-v2/style.json?key=apim",
+                center: [28.9789, 41.0103], // İstanbul örneği
+                zoom: 15,
+                pitch: 45, // 3D açıyı etkinleştir
+                bearing: -17.6
+            });
 
-        function onMapClick(e) {
-            let lat = e.latlng.lat;
-            let lon = e.latlng.lng;
-
-            window.lastSelectedLocation = { lat, lon };
-
-            L.marker([lat, lon]).addTo(map)
-                .bindPopup("Seçilen Nokta: " + lat + ", " + lon).openPopup();
-
-            // Seçilen noktanın çevresine bir çember ekle
-            L.circle([lat, lon], {
-                color: "blue",
-                fillColor: "#add8e6",
-                fillOpacity: 0.05,
-                radius: 500  // 500 metre yarıçap
-            }).addTo(map);
-
-            fetch(`http://localhost:8000/search/?lat=${lat}&lon=${lon}&category=building`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("API'den Gelen Veri:", data);
-
-                    if (data.elements) {
-                        data.elements.forEach(element => {
-                            if (element.type === "way" && element.geometry) {
-                                let coords = element.geometry.map(p => [p.lat, p.lon]);
-                                let buildingType = element.tags?.building || "default";
-                                let color = getBuildingColor(buildingType);
-
-                                L.polygon(coords, { color: color, fillOpacity: 0.6 }).addTo(map)
-                                    .bindPopup(`${element.tags?.name || "Bina"}<br>Tür: ${buildingType}`);
-                            }
-                        });
-                    } else {
-                        console.error("Hatalı API Yanıtı Formatı:", data);
+            map.on("load", () => {
+                map.addSource("openmaptiles", {
+                    type: "vector",
+                    url: "https://api.maptiler.com/tiles/v3/tiles.json?key=apim"
+                });
+                console.log(map);
+                map.addLayer({
+                    id: "3d-buildings",
+                    source: "openmaptiles",
+                    "source-layer": "building",
+                    type: "fill-extrusion",
+                    paint: {
+                        "fill-extrusion-color": [
+                            'match',
+                            ['get', 'building_type'],
+                            'house', '#808080',   // Evler gri
+                            'hospital', '#FF69B4', // Hastaneler pembe
+                            'shop', '#0000FF',     // Dükkanlar mavi
+                            'mall', '#FFA500',     // AVM'ler turuncu
+                            'park', '#008000',     // Parklar yeşil
+                            '#008000' // Varsayılan renk
+                        ],
+                        "fill-extrusion-height": ["get", "render_height"],
+                        "fill-extrusion-base": ["get", "render_min_height"],
+                        "fill-extrusion-opacity": 0.6
                     }
-                })
-                .catch(error => console.error("API Hatası:", error));
-        }
-
-        // Kategoriye göre bina renklendirme fonksiyonu
-        function getBuildingColor(buildingType) {
-            switch (buildingType) {
-                case "residential": return "orange";
-                case "school": return "blue";
-                case "mosque": return "green";
-                case "hospital": return "red";
-                case "office": return "purple";
-                default: return "gray";
-            }
-        }
-
-        map.on("click", onMapClick);
-        
-        document.getElementById("showBuildingCount").addEventListener("click", function() {
-            if (!window.lastSelectedLocation) {
-                alert("Önce haritada bir noktaya tıklayın.");
-                return;
-            }
-
-            let { lat, lon } = window.lastSelectedLocation;
-            fetch(`http://localhost:8000/building_count/?lat=${lat}&lon=${lon}&radius=1000`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById("buildingCount").innerText = `Toplam Bina: ${data.count}`;
-                })
-                .catch(error => console.error("API Hatası:", error));
+                });
+            });
         });
     </script>
 
