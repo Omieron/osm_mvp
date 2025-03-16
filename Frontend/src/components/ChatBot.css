@@ -1,0 +1,114 @@
+.chatbot {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #f9f9f9;
+  }
+  
+  .chat-header {
+    background-color: #3498db;
+    color: white;
+    padding: 10px 15px;
+    text-align: center;
+    font-size: 1.1rem;
+  }
+  
+  .chat-messages {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .message {
+    max-width: 80%;
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 18px;
+    word-wrap: break-word;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  }
+  
+  .user-message {
+    align-self: flex-end;
+    background-color: #dcf8c6;
+    border-bottom-right-radius: 5px;
+  }
+  
+  .bot-message {
+    align-self: flex-start;
+    background-color: white;
+    border-bottom-left-radius: 5px;
+  }
+  
+  .chat-input {
+    display: flex;
+    padding: 15px;
+    background-color: white;
+    border-top: 1px solid #eee;
+  }
+  
+  .chat-input input {
+    flex: 1;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    outline: none;
+    margin-right: 10px;
+    font-size: 1rem;
+  }
+  
+  .chat-input button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 5px;
+    outline: none;
+    transition: background-color 0.2s;
+  }
+  
+  .chat-input button:hover {
+    background-color: #2980b9;
+  }
+  
+  .chat-input button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+  }
+  
+  .mic-button {
+    background-color: #2ecc71 !important;
+  }
+  
+  .mic-button:hover {
+    background-color: #27ae60 !important;
+  }
+  
+  .mic-button.recording {
+    background-color: #e74c3c !important;
+    animation: pulse 1.5s infinite;
+  }
+  
+  .mic-button.recording:hover {
+    background-color: #c0392b !important;
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
