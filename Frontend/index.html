@@ -38,6 +38,9 @@
     <h2>OSM Bina Gösterimi</h2>
     <p>Haritada bir noktaya tıklayın, çevredeki binaları turuncu renkte görün.</p>
 
+    <textarea id="locationInput" placeholder="Konum girin"></textarea>
+    <button onclick="findLocation()">Konumu Bul</button>
+    
     <div id="map"></div>
     <button id="showBuildingCount">Bina Sayısını Göster</button>
     <p id="buildingCount">Toplam Bina: -</p>
@@ -73,12 +76,18 @@
                 radius: 500  // 500 metre yarıçap
             }).addTo(map);
 
-            fetch(`http://localhost:8000/search/?lat=${lat}&lon=${lon}&category=building`)
-                .then(response => response.json())
+            let apiUrl = `http://localhost:8000/search/?lat=${lat}&lon=${lon}&category=building`;
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP Hatası! Durum Kodu: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     console.log("API'den Gelen Veri:", data);
 
-                    if (data.elements) {
+                    if (data && Array.isArray(data.elements)) { // `data.elements` varsa ve bir dizi ise çalıştır
                         data.elements.forEach(element => {
                             if (element.type === "way" && element.geometry) {
                                 let coords = element.geometry.map(p => [p.lat, p.lon]);
@@ -90,10 +99,13 @@
                             }
                         });
                     } else {
-                        console.error("Hatalı API Yanıtı Formatı:", data);
+                        console.error("API Yanıtı Beklenen Format Değil:", data);
                     }
                 })
-                .catch(error => console.error("API Hatası:", error));
+                .catch(error => {
+                    console.error("API Hatası:", error);
+                    alert(`Sunucuya bağlanılamadı!\nLütfen backend'in çalıştığını ve şu URL'nin doğru olduğunu kontrol edin:\n${apiUrl}`);
+                });
         }
 
         // Kategoriye göre bina renklendirme fonksiyonu
@@ -106,6 +118,30 @@
                 case "office": return "purple";
                 default: return "gray";
             }
+        }
+
+        function findLocation() {
+            var location = document.getElementById('locationInput').value;
+            if (!location) {
+                alert('Lütfen bir konum girin!');
+                return;
+            }
+            fetch(`http://localhost:8000/get-location?place=${encodeURIComponent(location)}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("API Yanıtı:", data); // API yanıtını konsolda kontrol et
+
+                    if (data.latitude !== undefined && data.longitude !== undefined) {
+                        let lat = data.latitude;
+                        let lon = data.longitude;
+
+                        // Tıklama olayını tetikle
+                        onMapClick({ latlng: { lat: lat, lng: lon } });
+                    } else {
+                        alert('Konum bilgisi eksik veya hatalı!');
+                    }
+                })
+                .catch(error => console.error('API Hatası:', error));
         }
 
         map.on("click", onMapClick);

@@ -9,12 +9,13 @@ import json
 import requests
 from models import Building
 from crud import insert_buildings
+from text_to_location import get_location_coordinates
 
 app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500"],  # Gerekirse belirli domainleri ekleyebilirsin
+    allow_origins=["*"],  # Tüm domainlerden gelen isteklere izin ver
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,3 +79,17 @@ def get_building_count(
     ).count()
 
     return {"count": count}
+
+@app.get("/get-location")
+def get_location(place: str, db: Session = Depends(get_db)):
+    coordinates = get_location_coordinates(place)
+    if coordinates:
+        buildings_data = get_buildings(db)  # Doğrudan fonksiyonu çağır
+        buildings = buildings_data["features"]  # GeoJSON formatına uygun hale getir
+        
+        return {
+            "latitude": coordinates[0],
+            "longitude": coordinates[1],
+            "buildings": buildings
+        }
+    return {"error": "Konum bulunamadı"}
